@@ -1,0 +1,9 @@
+{
+  "name": "Phỏng vấn Backend",
+  "headline": "Câu hỏi phỏng vấn backend, hiểu tới gốc.",
+  "intro": "Mỗi bài là một câu hỏi phỏng vấn thật: video ngắn để xem nhanh, bài học có sơ đồ bấm từng bước, ô thử tay và trắc nghiệm để hiểu kỹ. Số liệu nào cũng kèm nguồn.",
+  "footer": "Lời đọc trong video bằng giọng AI (VieNeu-TTS). Kịch bản, hình và bài viết do tác giả tự làm.",
+  "url": "",
+  "posts": {
+  }
+}
