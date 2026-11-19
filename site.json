@@ -4,6 +4,8 @@
   "intro": "Mỗi bài là một câu hỏi phỏng vấn thật: video ngắn để xem nhanh, bài học có sơ đồ bấm từng bước, ô thử tay và trắc nghiệm để hiểu kỹ. Số liệu nào cũng kèm nguồn.",
   "footer": "Lời đọc trong video bằng giọng AI (VieNeu-TTS). Kịch bản, hình và bài viết do tác giả tự làm.",
   "url": "",
-  "posts": {
-  }
+    "posts": {
+      "phong-van-thu-tu-event":   { "date": "2026-12-05", "youtube": "", "tiktok": "", "facebook": "" },
+      "phong-van-ba-muc-dam-bao": { "date": "2026-12-15", "youtube": "", "tiktok": "", "facebook": "" }
+    }
 }
