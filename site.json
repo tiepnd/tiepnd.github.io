@@ -5,6 +5,96 @@
   "footer": "Lời đọc trong video bằng giọng AI (VieNeu-TTS). Kịch bản, hình và bài viết do tác giả tự làm.",
   "url": "",
     "posts": {
+      "system-design-fundamentals": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "system-design-capacity-estimation": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "design-url-shortener": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "design-rate-limiter": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "design-distributed-cache": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "design-notification-system": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "design-news-feed-system": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "design-chat-system": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "design-video-streaming-platform": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "design-ticket-booking-system": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "design-payment-system": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "design-order-processing-system": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "design-distributed-message-queue": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "design-distributed-transaction": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
+    "design-scalable-file-storage": {
+      "date": "2026-11-24",
+      "youtube": "",
+      "tiktok": "",
+      "facebook": ""
+    },
       "phong-van-thu-tu-event":   { "date": "2026-11-19", "youtube": "", "tiktok": "", "facebook": "" },
       "phong-van-ba-muc-dam-bao": { "date": "2026-11-19", "youtube": "", "tiktok": "", "facebook": "" }
     }
