@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>URL Shortener · System Design</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+  <header class="page-head wrap">
+    <a class="crumb" href="../index.html">← System Design</a>
+    <p class="eyebrow">Project 01</p>
+    <h1>URL Shortener</h1>
+    <p class="lede">Rút gọn một URL dài thành link ngắn; ai mở link ngắn sẽ được chuyển hướng về URL gốc.</p>
+  </header>
+
+  <nav class="stages" aria-label="Tiến độ">
+    <ol>
+      <li><a class="stage" href="#fr" data-status="doing"><b>01</b><span>FR</span></a></li>
+      <li><a class="stage" href="#nfr" data-status="todo"><b>02</b><span>NFR</span></a></li>
+      <li><a class="stage" href="#capacity" data-status="todo"><b>03</b><span>Capacity</span></a></li>
+      <li><a class="stage" href="#api" data-status="todo"><b>04</b><span>API</span></a></li>
+      <li><a class="stage" href="#data" data-status="todo"><b>05</b><span>Data model</span></a></li>
+      <li><a class="stage" href="#hld" data-status="todo"><b>06</b><span>HLD</span></a></li>
+      <li><a class="stage" href="#deep" data-status="todo"><b>07</b><span>Deep dive</span></a></li>
+      <li><a class="stage" href="#build" data-status="todo"><b>08</b><span>Build &amp; Test</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="wrap">
+    <section class="step" id="fr" data-status="doing" aria-labelledby="fr-h">
+      <span class="step-no">01</span>
+      <div>
+        <div class="step-head"><h2 id="fr-h">Functional Requirements</h2><span class="badge">Đang bàn</span></div>
+        <div class="step-body">
+          <p class="ask">Hệ thống làm được gì cho người dùng.</p>
+          <h3>Đã chốt</h3>
+          <p class="empty">Chưa có.</p>
+          <h3>Câu hỏi đang mở</h3>
+
+          <details class="q" open>
+            <summary><span class="q-no">Q1</span><span>Có cho người dùng tự đặt alias không (vd. <code>/sale-2026</code>)?</span></summary>
+            <div class="q-body">
+              <h4>Trước hết: 4 cách sinh key</h4>
+              <div class="table-scroll">
+                <table>
+                  <thead><tr><th>Cách</th><th>Cơ chế</th><th>Được</th><th>Mất</th></tr></thead>
+                  <tbody>
+                    <tr><td><b>Counter</b></td><td>ID tăng dần (auto-increment, hoặc mỗi server xin trước một dải ID) rồi đổi sang base62</td><td>Không bao giờ trùng, không cần kiểm tra trước khi ghi; key ngắn nhất</td><td>Đoán được link kế tiếp, duyệt được toàn bộ link; cần một nơi cấp ID chung</td></tr>
+                    <tr><td><b>Random</b></td><td>Sinh ngẫu nhiên 7 ký tự base62 (62<sup>7</sup> ≈ 3,5 nghìn tỷ key), insert, trùng thì sinh lại</td><td>Không đoán được; mỗi server tự sinh, không phối hợp</td><td>Mỗi lần ghi phải kiểm tra trùng; càng đầy càng dễ trùng</td></tr>
+                    <tr><td><b>Hash URL</b></td><td>MD5/SHA của URL dài, lấy 7 ký tự đầu</td><td>Cùng URL ra cùng key (tự dedup)</td><td>Hai URL khác nhau vẫn có thể ra cùng key, vẫn phải xử lý trùng</td></tr>
+                    <tr><td><b>Key pool</b></td><td>Một service riêng sinh sẵn key chưa dùng; app server lấy theo lô vào bộ nhớ</td><td>Lúc ghi không phải kiểm tra trùng, nhanh</td><td>Thêm một service phải vận hành; server chết thì mất các key còn trong lô</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <h4>Không cho alias</h4>
+              <p>Chỉ hệ thống tạo key, nên dùng cách nào trong 4 cách trên cũng được. Counter đơn giản nhất vì không bao giờ trùng.</p>
+
+              <h4>Cho alias</h4>
+              <p>Key người dùng đặt và key hệ thống sinh nằm chung một không gian tên. Phát sinh 4 việc:</p>
+              <ol>
+                <li><b>Hai nguồn key đụng nhau.</b> Người dùng đặt <code>abc1234</code>, vài tháng sau counter đếm tới đúng số đó. Có hai cách xử lý. (a) Mọi key đều đi qua unique constraint, trùng thì sinh lại. Cách này hợp với random; còn counter thì phải dò và nhảy qua số đã bị chiếm, nên mất luôn ưu điểm không cần kiểm tra. (b) Tách định dạng: key sinh luôn đúng 7 ký tự, alias bắt buộc khác định dạng (vd. từ 8 ký tự trở lên hoặc có dấu <code>-</code>), nên hai tập không bao giờ giao nhau.</li>
+                <li><b>Hai người xin cùng một alias cùng lúc.</b> Không làm "kiểm tra rồi mới insert", vì cả hai đều thấy alias còn trống. Insert thẳng, để unique constraint chặn người sau, trả <code>409 Conflict</code>.</li>
+                <li><b>Từ dành riêng.</b> Chặn alias trùng route của chính hệ thống (<code>api</code>, <code>login</code>, <code>admin</code>, <code>static</code>…) và từ ngữ xấu.</li>
+                <li><b>Validate.</b> Bộ ký tự cho phép, độ dài tối đa, có phân biệt hoa thường không.</li>
+              </ol>
+
+              <h4>Hệ thống thật</h4>
+              <ul class="evidence">
+                <li><b>Dub</b> (mã nguồn mở): key random <code>nanoid(7)</code>, kiểm tra cặp (domain, key) đã tồn tại chưa, trùng thì sinh lại. Key là duy nhất theo từng domain. <a class="src" href="https://github.com/dubinc/dub/blob/main/apps/web/lib/planetscale/get-random-key.ts" target="_blank" rel="noopener">mã nguồn ↗</a></li>
+                <li><b>YOURLS</b> (mã nguồn mở): counter đổi sang base36, có cho đặt keyword riêng. Vì vậy vòng sinh key phải lặp <code>$id++</code> cho tới khi gặp keyword còn trống, đúng vấn đề (a) ở trên. <a class="src" href="https://github.com/YOURLS/YOURLS/blob/master/includes/functions-shorturls.php" target="_blank" rel="noopener">mã nguồn ↗</a></li>
+                <li><b>Bitly, TinyURL</b>: đều cho đặt alias (Bitly gọi là custom back-half). Doanh nghiệp dùng domain riêng thì có không gian key riêng, nên ít tranh alias hơn.</li>
+              </ul>
+              <p class="takeaway">Hệ thống hiện đại phần lớn dùng random kèm unique constraint theo (domain, key), vì alias tự đặt cũng đi qua đúng cơ chế đó mà không cần làm thêm. Counter hợp khi không có alias và không ngại bị đoán link.</p>
+            </div>
+          </details>
+
+          <details class="q" open>
+            <summary><span class="q-no">Q2</span><span>Link có sửa đích, xóa, hoặc tự hết hạn không?</span></summary>
+            <div class="q-body">
+              <h4>Bất biến hay sửa/xóa được</h4>
+              <div class="table-scroll">
+                <table class="compare">
+                  <thead><tr><th>Ảnh hưởng</th><th>Bất biến</th><th>Sửa đích / xóa được</th></tr></thead>
+                  <tbody>
+                    <tr><td><b>Cache</b></td><td>Cache vô thời hạn ở mọi tầng: CDN, Redis, cache trong process, cả trình duyệt (301)</td><td>Sửa xong phải xóa cache ở mọi tầng. Không để trình duyệt nhớ lâu được, nên dùng 302 hoặc 301 kèm <code>max-age</code> ngắn</td></tr>
+                    <tr><td><b>Ai được tạo link</b></td><td>Ẩn danh cũng được</td><td>Phải biết ai là chủ link: tài khoản, xác thực (API key, OAuth), kiểm quyền mỗi lần sửa</td></tr>
+                    <tr><td><b>Data model</b></td><td>Chỉ insert, không có đường update</td><td>Thêm <code>owner_id</code>, <code>updated_at</code>; xóa thì soft delete (giữ bản ghi, đánh dấu đã xóa)</td></tr>
+                    <tr><td><b>Rủi ro</b></td><td>Thấp</td><td>Đánh tráo đích: tạo link tới trang sạch, đợi được chia sẻ rộng rồi đổi sang trang lừa đảo. Phải quét lại URL mỗi lần sửa</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <h4>Hết hạn (có thể có mà không cần sửa/xóa)</h4>
+              <ul>
+                <li>Thêm cột <code>expires_at</code>. Lúc redirect so với giờ hiện tại; hết hạn thì trả <code>404</code>/<code>410</code> hoặc chuyển sang trang thay thế.</li>
+                <li>TTL của cache không được dài hơn thời gian còn lại của link, nếu không link đã hết hạn vẫn chạy.</li>
+                <li>Dọn dữ liệu: kiểm tra lúc đọc, cộng job nền xóa định kỳ; hoặc dùng TTL có sẵn của DB (DynamoDB TTL, Cassandra TTL, MongoDB TTL index).</li>
+                <li>Key đã xóa hoặc hết hạn không cấp lại cho người khác. Link cũ còn nằm trong email, tài liệu in; cấp lại là đưa người bấm tới nội dung của người khác.</li>
+              </ul>
+
+              <h4>Hệ thống thật</h4>
+              <ul class="evidence">
+                <li><b>Bitly</b>: sửa đích (nút Redirect) có ở gói trả phí. Trả <code>301</code> nhưng kèm <code>Cache-Control: private, max-age=90</code>, nên trình duyệt chỉ nhớ 90 giây; sửa đích thì chậm nhất 90 giây sau người dùng cũ cũng thấy đích mới. <a class="src" href="https://support.bitly.com/hc/en-us/articles/230900588" target="_blank" rel="noopener">Bitly support ↗</a> <span class="src">· header kiểm bằng curl 24/11/2026</span></li>
+                <li><b>TinyURL</b>: trả <code>301</code> kèm <code>no-cache, no-store</code>, nên trình duyệt không nhớ, lần nào cũng hỏi lại server. <span class="src">curl 24/11/2026</span></li>
+                <li><b>Dub</b>: link có <code>expiresAt</code> và <code>expiredUrl</code>; hết hạn thì <code>302</code> sang <code>expiredUrl</code>. <a class="src" href="https://github.com/dubinc/dub/blob/main/apps/web/lib/middleware/link.ts" target="_blank" rel="noopener">mã nguồn ↗</a></li>
+              </ul>
+              <p class="takeaway">Dịch vụ thương mại đều cho sửa đích (thường là tính năng trả phí), và cái giá phải trả là không cho trình duyệt cache lâu. Vì vậy trên thực tế mã 301 "permanent" thường đi kèm thời gian cache rất ngắn hoặc không cache.</p>
+            </div>
+          </details>
+
+          <details class="q" open>
+            <summary><span class="q-no">Q3</span><span>Có cần thống kê click không, ở mức nào (tổng số, theo thời gian, quốc gia, thiết bị)?</span></summary>
+            <div class="q-body">
+              <h4>So sánh</h4>
+              <div class="table-scroll">
+                <table class="compare">
+                  <thead><tr><th>Ảnh hưởng</th><th>Không thống kê</th><th>Có thống kê</th></tr></thead>
+                  <tbody>
+                    <tr><td><b>Mã redirect</b></td><td>301 cache lâu được: trình duyệt nhớ, lần bấm sau không tới server, server nhẹ</td><td>Mọi click phải tới server: dùng 302, hoặc 301 với cache rất ngắn hay không cache</td></tr>
+                    <tr><td><b>Đường redirect</b></td><td>Chỉ đọc: tra key, trả header <code>Location</code></td><td>Vừa đọc vừa ghi: mỗi click sinh một sự kiện</td></tr>
+                    <tr><td><b>Cách ghi</b></td><td>Không có</td><td>Không ghi DB đồng bộ trong request: chậm, và link viral thì hàng triệu lệnh UPDATE dồn vào cùng một dòng, tranh khóa. Đẩy sự kiện vào hàng đợi (Kafka), trả redirect ngay, xử lý sau</td></tr>
+                    <tr><td><b>Lưu ở đâu</b></td><td>Không có</td><td>Chỉ tổng số: counter trong Redis (<code>INCR</code>), định kỳ cộng dồn xuống DB. Theo thời gian, quốc gia, thiết bị: lưu sự kiện thô vào kho OLAP (ClickHouse, Druid, BigQuery) rồi <code>GROUP BY</code>. Đếm người duy nhất: HyperLogLog</td></tr>
+                    <tr><td><b>Việc kèm theo</b></td><td>Không có</td><td>Lọc bot (crawler, bot preview link của Slack/Facebook); IP sang quốc gia (GeoIP), User-Agent sang thiết bị; IP là dữ liệu cá nhân nên băm hoặc chỉ giữ quốc gia; chấp nhận số gần đúng vì hàng đợi có thể giao trùng sự kiện</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <h4>Hệ thống thật</h4>
+              <ul class="evidence">
+                <li><b>Dub</b>: <code>302</code> cho mọi link, chỉ trang gốc của domain dùng <code>301</code>. Ghi click bằng <code>waitUntil</code>: trả redirect trước, ghi sau. Cùng một người bấm cùng link trong 1 giờ chỉ tính 1 lần, nhớ trong Redis. Sự kiện click đẩy sang Tinybird (ClickHouse) để thống kê theo thời gian, quốc gia, thiết bị. Trước đó Dub lưu click trong Redis Sorted Set, bỏ vì truy vấn chậm và kém linh hoạt. <a class="src" href="https://github.com/dubinc/dub/blob/main/apps/web/lib/middleware/link.ts" target="_blank" rel="noopener">mã nguồn ↗</a> <a class="src" href="https://github.com/dubinc/dub/blob/main/apps/web/lib/api/links/record-click-cache.ts" target="_blank" rel="noopener">chống đếm trùng ↗</a> <a class="src" href="https://www.tinybird.co/blog/upgrading-short-link-analytics-by-100x-with-steven-tey" target="_blank" rel="noopener">Tinybird ↗</a></li>
+                <li><b>Bitly</b>: giữ <code>301</code> (công cụ tìm kiếm chuyển uy tín sang trang đích, tốt cho SEO) nhưng <code>max-age=90</code>. Chỉ lần bấm lại của cùng một người trong 90 giây là không tới server, các click khác đều được đếm.</li>
+                <li><b>TinyURL</b>: <code>no-store</code>, nên click nào cũng tới server.</li>
+              </ul>
+              <p class="takeaway">Có thống kê thì gần như bắt buộc hai điều: mọi click phải tới server, và việc ghi phải tách khỏi đường redirect (bất đồng bộ). Mức chi tiết quyết định nơi lưu: chỉ tổng số thì Redis là đủ, chia theo chiều thì cần kho OLAP.</p>
+            </div>
+          </details>
+
+          <details class="q" open>
+            <summary><span class="q-no">Q4</span><span>Cùng một URL dài rút gọn hai lần: trả lại link cũ hay tạo link mới?</span></summary>
+            <div class="q-body">
+              <h4>So sánh</h4>
+              <div class="table-scroll">
+                <table class="compare">
+                  <thead><tr><th>Ảnh hưởng</th><th>Mỗi lần tạo link mới</th><th>Trả lại link cũ</th></tr></thead>
+                  <tbody>
+                    <tr><td><b>Đường ghi</b></td><td>Chỉ insert</td><td>Tra theo URL dài trước khi tạo, nên cần index. URL dài tới vài nghìn ký tự nên index trên hash của URL (vd. SHA-256), không index thẳng chuỗi</td></tr>
+                    <tr><td><b>Hai request cùng lúc</b></td><td>Không vấn đề</td><td>Cả hai cùng tra, cùng không thấy, cùng tạo. Cần unique constraint trên hash URL</td></tr>
+                    <tr><td><b>Thống kê và quyền</b></td><td>Mỗi người, mỗi chiến dịch một link, số click tách bạch</td><td>Nhiều người chung một link: không tách được click của ai, và không rõ ai được sửa/xóa. Thực tế chỉ dedup trong phạm vi một chủ (user, workspace)</td></tr>
+                    <tr><td><b>Chuẩn hóa URL</b></td><td>Không cần</td><td>Phải quyết định <code>HTTP://Example.com/</code> và <code>http://example.com</code> có tính là một không</td></tr>
+                    <tr><td><b>Lưu trữ</b></td><td>Tốn hơn, nhưng mỗi bản ghi vài trăm byte, không đáng kể</td><td>Tiết kiệm, hiếm khi là lý do chính</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <h4>Hệ thống thật</h4>
+              <ul class="evidence">
+                <li><b>Bitly</b>: API có cờ <code>force_new_link</code>, dùng khi muốn tạo bitlink mới cho URL đã có bitlink. Nghĩa là mặc định Bitly dùng lại link sẵn có trong tài khoản. <a class="src" href="https://dev.bitly.com/docs/getting-started/troubleshooting-tips/" target="_blank" rel="noopener">dev.bitly.com ↗</a></li>
+                <li><b>Dub</b>: tạo link thường luôn sinh link mới. Muốn dùng lại thì gọi endpoint riêng <code>PUT /links/upsert</code>, nó tìm link có cùng URL trong workspace. <a class="src" href="https://dub.co/docs/api-reference/links/upsert" target="_blank" rel="noopener">Dub docs ↗</a></li>
+                <li><b>YOURLS</b>: <code>YOURLS_UNIQUE_URLS</code> mặc định bật, mỗi URL dài chỉ có một link; tắt đi thì cho nhiều link. <a class="src" href="https://yourls.org/docs/guide/essentials/configuration" target="_blank" rel="noopener">YOURLS config ↗</a></li>
+              </ul>
+              <p class="takeaway">Dedup thường chỉ làm trong phạm vi chủ sở hữu và để client tự chọn, không dedup trên toàn hệ thống.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" id="nfr" data-status="todo" aria-labelledby="nfr-h">
+      <span class="step-no">02</span>
+      <div>
+        <div class="step-head"><h2 id="nfr-h">Non-Functional Requirements</h2><span class="badge">Chưa bàn</span></div>
+        <div class="step-body"><p class="ask">Hệ thống phải tốt đến mức nào: độ trễ, độ sẵn sàng, độ bền dữ liệu, bảo mật.</p></div>
+      </div>
+    </section>
+
+    <section class="step" id="capacity" data-status="todo" aria-labelledby="capacity-h">
+      <span class="step-no">03</span>
+      <div>
+        <div class="step-head"><h2 id="capacity-h">Capacity Estimation</h2><span class="badge">Chưa bàn</span></div>
+        <div class="step-body"><p class="ask">Quy mô bao nhiêu: QPS đọc/ghi, dung lượng lưu trữ, băng thông.</p></div>
+      </div>
+    </section>
+
+    <section class="step" id="api" data-status="todo" aria-labelledby="api-h">
+      <span class="step-no">04</span>
+      <div>
+        <div class="step-head"><h2 id="api-h">API Design</h2><span class="badge">Chưa bàn</span></div>
+        <div class="step-body"><p class="ask">Client gọi gì, gửi gì, nhận gì.</p></div>
+      </div>
+    </section>
+
+    <section class="step" id="data" data-status="todo" aria-labelledby="data-h">
+      <span class="step-no">05</span>
+      <div>
+        <div class="step-head"><h2 id="data-h">Data Model</h2><span class="badge">Chưa bàn</span></div>
+        <div class="step-body"><p class="ask">Lưu cái gì, ở đâu, tra theo khóa nào.</p></div>
+      </div>
+    </section>
+
+    <section class="step" id="hld" data-status="todo" aria-labelledby="hld-h">
+      <span class="step-no">06</span>
+      <div>
+        <div class="step-head"><h2 id="hld-h">High-Level Design</h2><span class="badge">Chưa bàn</span></div>
+        <div class="step-body"><p class="ask">Các thành phần chính và đường đi của request qua chúng.</p></div>
+      </div>
+    </section>
+
+    <section class="step" id="deep" data-status="todo" aria-labelledby="deep-h">
+      <span class="step-no">07</span>
+      <div>
+        <div class="step-head"><h2 id="deep-h">Deep Dive &amp; Trade-offs</h2><span class="badge">Chưa bàn</span></div>
+        <div class="step-body"><p class="ask">Chỗ khó nhất, các phương án, vì sao chọn phương án này.</p></div>
+      </div>
+    </section>
+
+    <section class="step" id="build" data-status="todo" aria-labelledby="build-h">
+      <span class="step-no">08</span>
+      <div>
+        <div class="step-head"><h2 id="build-h">Triển khai &amp; Test</h2><span class="badge">Chưa làm</span></div>
+        <div class="step-body"><p class="ask">Code thử phần lõi và test chứng minh thiết kế chạy đúng.</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="page-foot wrap">Cập nhật 24/11/2026</footer>
+</body>
+</html>
